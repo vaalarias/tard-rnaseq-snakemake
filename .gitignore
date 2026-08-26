@@ -1,0 +1,111 @@
+# Snakemake internal files
+.snakemake/
+snakemake.log
+*.snakemake.log
+
+# Pipeline outputs
+results/
+logs/
+benchmarks/
+
+# Input sequencing data
+data/
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+
+# Alignment files
+*.bam
+*.bai
+*.sam
+*.cram
+*.crai
+
+# Large reference files and indices
+resources/
+reference/
+references/
+*.fa
+*.fasta
+*.fna
+*.fa.gz
+*.fasta.gz
+*.fna.gz
+*.gtf
+*.gtf.gz
+*.gff
+*.gff3
+*.gff.gz
+*.gff3.gz
+*.gaf
+*.gaf.gz
+*.fai
+*.dict
+*.amb
+*.ann
+*.bwt
+*.pac
+*.sa
+
+# STAR index files
+Genome
+SA
+SAindex
+chrLength.txt
+chrName.txt
+chrNameLength.txt
+chrStart.txt
+exonGeTrInfo.tab
+exonInfo.tab
+geneInfo.tab
+genomeParameters.txt
+sjdbInfo.txt
+sjdbList.fromGTF.out.tab
+sjdbList.out.tab
+transcriptInfo.tab
+
+# Conda environments created locally
+.conda/
+conda/
+env/
+venv/
+.venv/
+
+# Keep environment definitions
+!workflow/envs/
+!workflow/envs/**/*.yaml
+!workflow/envs/**/*.yml
+
+# R temporary files
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Cluster and scheduler files
+slurm-*.out
+*.out
+*.err
+nohup.out
+
+# IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
