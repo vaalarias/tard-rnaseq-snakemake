@@ -1,0 +1,6 @@
+{
+    "SBATCH_DEFAULTS": "partition=cpu_p -qos=cpu_normal no-requeue output=joblogs/%x.%j.out error=joblogs/%x.%j.err job-name={rule}",
+    "CLUSTER_NAME": "",
+    "CLUSTER_CONFIG": "",
+    "ADVANCED_ARGUMENT_CONVERSION": "yes"
+}

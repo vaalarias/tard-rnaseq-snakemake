@@ -1,0 +1,40 @@
+# envs/r_dea.yaml
+name: r_dea
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.2
+  - r-essentials
+  - r-tidyverse
+  - r-dplyr
+  - r-tibble
+  - r-data.table
+  - r-patchwork
+  - r-circlize
+
+  # RNA-seq / Stats
+  - bioconductor-deseq2
+  - bioconductor-edger
+  - bioconductor-limma
+  - bioconductor-tximport
+  - bioconductor-rtracklayer
+
+  # GO, enrichment, annotation
+  - bioconductor-clusterprofiler
+  - bioconductor-org.hs.eg.db 
+  - bioconductor-mgsa
+
+  # Plotting
+  - r-ggplot2
+  - r-scales
+  - r-cowplot
+  - r-viridis
+  - r-venndiagram
+  - r-rcolorbrewer
+  - r-matrixstats
+  - r-ggrepel
+  - r-yaml
+  - r-pheatmap
+  - bioconductor-complexheatmap
+  - bioconductor-enhancedvolcano

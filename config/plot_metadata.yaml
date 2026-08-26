@@ -1,0 +1,18 @@
+percent_aligned:
+  GCB-1: 13.6
+  GCB-2: 13.5
+  GAB-1: 15.0
+  GAB-2: 15.4
+  GAB-3: 15.7
+  GCO-1: 14.4
+  ECO-3: 32.6
+  ECO-4: 33.9
+  ECO-5: 35.1
+  EAO-1: 33.4
+  EAO-2: 34.0
+  EAO-3: 34.5
+
+features_above_count: 10
+pca_ntop: 500
+
+

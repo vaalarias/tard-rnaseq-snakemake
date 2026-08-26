@@ -1,0 +1,123 @@
+## Path to samplesheet and output directory
+samplesheet: "data/samplesheet.csv"
+outdir: "results"
+logdir: "logs"
+
+## Reference files
+refs:
+  genome_fa: "config/ref/GCF_019649055.1_Prichtersi_v1.0_genomic.fna"
+  gtf: "config/ref/GCF_019649055.1_Prichtersi_v1.0_genomic.gtf"
+  star_index: "config/ref/star_index"
+  hisat_index: "config/ref/hisat_index"
+  salmon_index: "config/ref/salmon_index"
+  transcriptome_fa: "config/ref/GCF_019649055.1_Prichtersi_v1.0_rna.fna"
+  decoy: "config/ref/decoys.txt"
+  gentrome: "config/ref/gentrome.fa.gz"
+  gaf: "config/ref/GCF_019649055.1-RS_2023_04_gene_ontology.gaf"
+
+### Aligner and quantification specific parameters
+aligner: "star"   # or  "hisat2"
+salmon: true
+params:
+  star_sjdb_overhang: 100 # Index
+  star: "--outSAMtype BAM SortedByCoordinate --outReadsUnmapped Fastx --alignEndsType Local --twopassMode Basic --outFilterMismatchNoverLmax 0.3 --outFilterScoreMinOverLread 0.3 --outFilterMatchNminOverLread 0.2 --outFilterMultimapNmax 200 --winAnchorMultimapNmax 200 --seedSearchStartLmax 15"
+  hisat2: ""
+  salmon: "--validateMappings --gcBias"
+  salmon_k: 31
+  featurecounts: "-p"
+
+### Downstream Analysis Parameters
+deseq2:
+  counts_method: "featurecounts"  # "featurecounts" or "salmon"
+  # Design formula (as used in DESeq2)
+  design: "~ condition + species"
+  contrasts:
+   - ["condition", "anhydrobiosis", "control"]
+
+  padj_threshold: 0.05
+  log2fc_threshold: 1.6
+
+### Kraken2 parameters
+kraken2:
+  db: "/lustre/groups/ife/workspace/schneider/valentina.ojeda/db/custom"
+  confidence: 0.05
+  minimum_hit_group: 3
+  bracken_level: "S"
+  bracken_readlen: 100
+
+### Blast parameters for descriptive screening
+unmapped_reads:
+  head_n: 25
+  subsample_fraction: 0.05
+  min_length: 50
+  max_n_fraction: 0.10
+  random_seed: 123
+  
+blast:
+  samples:
+    - EAO-3
+    - GAB-3
+
+  database: core_nt
+  task: megablast
+  evalue: 1e-10
+  max_target_seqs: 5
+  remote: true
+  
+  samples:
+    - EAO-3
+    - GAB-3
+
+  database: nt
+  task: megablast
+  evalue: 1e-10
+  max_target_seqs: 5
+  remote: true
+
+  chunk_size: 10
+  max_retries: 3
+  retry_wait_seconds: 60
+  attempt_timeout_seconds: 1800
+
+### Parameters for visualizations
+plots:
+  general:
+    width: 8          # inch
+    height: 6         # inch
+    dpi: 300
+    font_size: 12
+    showCategory: 15  
+
+  colors:
+    pca:
+      group: ["#1b9e77", "#d95f02", "#7570b3"]  # colors by condition
+    heatmap:
+      low: "white"
+      high: "#2166ac"
+    volcano:
+      sig_up: "#e41a1c"
+      sig_down: "#377eb8"
+      nonsig: "grey70"
+    venn:
+      colors: ["#1b9e77", "#d95f02", "#7570b3"]
+
+  thresholds:
+    padj: 0.05
+    log2fc: 1.6
+    plots:
+
+  species:
+    - experimentalis
+    - gadabouti
+
+  epigenetic_families:
+    - Polycomb
+    - KDM
+    - KMT
+    - HAT
+    - HDAC
+
+
+## Samples excluded from analysis
+# GCB-4,data/25L007594_S71_L007_R1_001.fastq.gz,data/25L007594_S71_L007_R2_001.fastq.gz,gadabouti,control,bleached
+# GCB-4,data/25L007594_S71_L008_R1_001.fastq.gz,data/25L007594_S71_L008_R2_001.fastq.gz,gadabouti,control,bleached

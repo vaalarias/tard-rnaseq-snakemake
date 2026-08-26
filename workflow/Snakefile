@@ -1,0 +1,82 @@
+from pathlib import Path
+import pandas as pd
+
+# Load config file
+configfile: "config/config.yaml"
+
+# Read samplesheet
+samples = pd.read_csv(
+    config["samplesheet"],
+    sep=",",
+    comment="#",
+    dtype=str
+)
+SAMPLES = samples["sample"].unique().tolist()
+
+# Output configuration
+OUTDIR = Path(config["outdir"])
+LOGS = Path(config["logdir"])
+
+# Output per rule
+RAW_FASTQ = f"{OUTDIR}/fastq"
+TRIMMED = f"{OUTDIR}/trimmed"
+FASTQC_RAW = f"{OUTDIR}/fastqc/raw"
+FASTQC_TRIMMED = f"{OUTDIR}/fastqc/trimmed"
+ALIGN = f"{OUTDIR}/alignments"
+COUNTS = f"{OUTDIR}/counts"
+DESEQ = f"{OUTDIR}/deseq"
+MULTIQC = f"{OUTDIR}/multiqc"
+KRAKEN = f"{OUTDIR}/kraken2"
+BLAST = f"{OUTDIR}/blast"
+NORMALIZATION = f"{OUTDIR}/normalization"
+ANNOTATION = f"{OUTDIR}/annotation"
+PLOTS = f"{OUTDIR}/plots"
+
+# Alignment and annotation files
+GENOME = config["refs"]["genome_fa"]
+GTF = config["refs"]["gtf"]
+TRANSCRIPTOME = config["refs"]["transcriptome_fa"]
+
+STAR_INDEX = config["refs"]["star_index"]
+HISAT_INDEX = config["refs"]["hisat_index"]
+SALMON_INDEX = config["refs"]["salmon_index"]
+DECOY = config["refs"]["decoy"]
+GENTROME = config["refs"]["gentrome"]
+
+# Aligner
+ALIGNER = config["aligner"]
+SALMON = config.get("salmon", False)
+
+
+## General Rules
+include: "rules/input_functions.smk"
+include: "rules/targets.smk"
+
+### Preprocessing and quality control
+include: "rules/preprocessing/preprocess.smk"
+include: "rules/preprocessing/qc.smk"
+
+### Contamination screening
+include: "rules/contamination_screening/kraken2.smk"
+include: "rules/contamination_screening/blast_unnanotated.smk"
+
+### Alignment and quantification
+include: "rules/alignment/align.smk"
+include: "rules/alignment/counts.smk"
+
+## Normalization and Differential expression analysis
+include: "rules/dea/deseq2.smk"
+include: "rules/dea/targets_plots.smk"
+include: "rules/dea/plots.smk"
+
+## Summary
+include: "rules/preprocessing/multiqc.smk"
+
+## Analysis and Figures
+
+# Rule all
+rule all_targets:
+    input:
+        targets(),
+        plot_targets()
+    default_target: True

@@ -1,0 +1,7 @@
+name: py_scripts
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pandas>=2

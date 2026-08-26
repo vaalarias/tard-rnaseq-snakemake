@@ -1,0 +1,11 @@
+name: snakemake_env
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.10
+  - snakemake=7.32
+  - snakemake-wrapper-utils
+  - mamba
+  - pandas
+ 

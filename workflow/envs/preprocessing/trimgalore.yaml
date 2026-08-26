@@ -1,0 +1,7 @@
+name: trimgalore_env
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - trim-galore
+  - cutadapt

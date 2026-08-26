@@ -1,0 +1,16 @@
+name: deseq2
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - r
+  - defaults
+dependencies:
+  - r-base=4.3
+  - bioconductor-deseq2
+  - r-readr
+  - r-dplyr
+  - r-stringr
+  - r-tibble
+  - r-ggplot2
+  - r-pheatmap

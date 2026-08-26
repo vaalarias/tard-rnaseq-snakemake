@@ -8,12 +8,9 @@ results/
 logs/
 benchmarks/
 
-# Input sequencing data
-data/
-*.fastq
-*.fastq.gz
-*.fq
-*.fq.gz
+# Input data: retain only the symbolic samplesheet
+data/*
+!data/samplesheet.csv
 
 # Alignment files
 *.bam
@@ -47,6 +44,8 @@ references/
 *.bwt
 *.pac
 *.sa
+*.faa
+*.faa.gz
 
 # STAR index files
 Genome
@@ -64,6 +63,16 @@ sjdbInfo.txt
 sjdbList.fromGTF.out.tab
 sjdbList.out.tab
 transcriptInfo.tab
+
+# Generated reference resources
+/config/ref/salmon_index/
+/config/ref/star_index/
+/config/ref/salmon_pre/
+/config/ref/annotation_emmaper_NOTUSED/
+
+
+# Snakemake marker files
+**/.snakemake_timestamp
 
 # Conda environments created locally
 .conda/
@@ -109,3 +118,21 @@ nohup.out
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generated workflow graphs
+rulegraph.pdf
+rulegraph.png
+dag.pdf
+dag.png
+
+# BUSCO generated files
+workflow/scripts/external_analyses/busco/busco_downloads/
+workflow/scripts/external_analyses/busco/tardigrade_busco/
+workflow/scripts/external_analyses/busco/*.log
+
+# Retain BUSCO scripts
+!workflow/scripts/external_analyses/busco/*.sh
+notebooks
+annotation
+
+
