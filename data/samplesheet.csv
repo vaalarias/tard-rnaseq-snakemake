@@ -7,14 +7,14 @@ sample,R1,R2,species,condition,treatment
 # condition  : "control" or "anhydrobiosis"
 # treatment  : "water" or "bleached"
 #
-# NOTE: fastq paths below are PLACEHOLDERS (no real data yet). They
+# NOTE: fastq paths below are PLACEHOLDERS (no real data paths). They
 # follow the naming convention <sample_id>_R1.fastq.gz / _R2.fastq.gz
 # under data/. This lets the pipeline be dry-run / partially run (e.g.
 # starting from the counts step onward) without failing on missing
 # input file references, as long as the corresponding rules aren't
 # actually re-triggered for the raw-fastq stage.
 #
-# GCB-3 is commented out: marked as "Removed" in the sample table.
+# GCB-4 is commented out: marked as "Removed" in the sample table.
 
 # --- Pam. experimentalis, Control, Water ---
 ECO-3,data/ECO-1_R1.fastq.gz,data/ECO-1_R2.fastq.gz,experimentalis,control,water

@@ -29,6 +29,3 @@ cluster-cancel: "qdel"
 default-resources:
   - mem_mb=4000
   - time_min=240
-
-# Default SGE queue if a rule doesn't specify one via resources: queue="..."
-# See "qstat -g c" on chaac for available queues (default, long)
