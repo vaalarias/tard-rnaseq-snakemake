@@ -395,24 +395,15 @@ rule plot_quantification_method_comparison:
         ]
     output:
         method_plot = (
-            f"{PLOTS}/method_comparison/"
-            "figure_03b_method_comparison.pdf"
-        ),
+            f"{PLOTS}/method_comparison/figure_03b_method_comparison.pdf"),
         overlap_plot = (
-            f"{PLOTS}/method_comparison/"
-            "figure_03a_feature_overlap.pdf"
-        ),
+            f"{PLOTS}/method_comparison/figure_03a_feature_overlap.pdf"),
         combined_plot = (
-            f"{PLOTS}/method_comparison/"
-            "figure_03_quantification_comparison.pdf"
-        ),
+            f"{PLOTS}/method_comparison/figure_03_quantification_comparison.pdf"),
         sample_table = (
-            f"{PLOTS}/method_comparison/"
-            "detected_features_by_sample.tsv"
-        ),
+            f"{PLOTS}/method_comparison/detected_features_by_sample.tsv"),
         overlap_table = (
-            f"{PLOTS}/method_comparison/"
-            "feature_overlap_by_group.tsv"
+            f"{PLOTS}/method_comparison/feature_overlap_by_group.tsv"
         )
     params:
         samples = SAMPLES

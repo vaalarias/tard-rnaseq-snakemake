@@ -46,7 +46,7 @@
         "results/plots/heatmaps/go_interest",
         "results/plots/method_comparison/figure_03a_feature_overlap.pdf",
         "results/plots/method_comparison/figure_03b_method_comparison.pdf",
-        "results/plots/method_comparison/figure_03_quantification_comparison.pdf"
+        "results/plots/method_comparison/figure_03_quantification_comparison.pdf",
         "results/plots/method_comparison/detected_features_by_sample.tsv",
         "results/plots/method_comparison/feature_overlap_by_group.tsv",
     ]
