@@ -79,6 +79,10 @@ max_n_fraction = float(
     snakemake.params["max_n_fraction"]
 )
 
+max_base_fraction = float(
+    snakemake.params["max_base_fraction"]
+)
+
 seed = int(
     snakemake.params["seed"]
 )
@@ -112,6 +116,7 @@ subsampled_reads = 0
 accepted_reads = 0
 short_reads = 0
 ambiguous_reads = 0
+low_complexity_reads = 0
 
 for fastq in (r1, r2):
     for sequence in read_fastq_sequences(fastq):
@@ -133,6 +138,19 @@ for fastq in (r1, r2):
 
         if n_fraction > max_n_fraction:
             ambiguous_reads += 1
+            continue
+        
+        base_counts = Counter(sequence)
+        most_common_base_count = max(
+            base_counts.values()
+        )
+        observed_max_base_fraction = (
+            most_common_base_count /
+            len(sequence)
+        )
+
+        if observed_max_base_fraction > max_base_fraction:
+            low_complexity_reads += 1
             continue
 
         sequence_counts[sequence] += 1

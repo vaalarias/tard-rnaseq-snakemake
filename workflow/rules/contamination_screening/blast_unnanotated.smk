@@ -22,7 +22,8 @@ rule summarize_star_unmapped_reads:
         fraction = config["unmapped_reads"]["subsample_fraction"],
         min_length = config["unmapped_reads"]["min_length"],
         max_n_fraction = config["unmapped_reads"]["max_n_fraction"],
-        seed = config["unmapped_reads"]["random_seed"]
+        seed = config["unmapped_reads"]["random_seed"],
+        max_base_fraction = (config["unmapped_reads"]["max_base_fraction"]),
     log:
         (
             f"{LOGS}/blast/unmapped_reads/"
@@ -95,10 +96,10 @@ rule blast_unmapped_sequences:
             )
         ),
         attempt_timeout_seconds = (
-        config["blast"].get(
-            "attempt_timeout_seconds",
-            1800
-        )
+            config["blast"].get(
+                "attempt_timeout_seconds",
+                1800
+            )
         )
     resources:
         mem_mb = 4000,
@@ -107,7 +108,7 @@ rule blast_unmapped_sequences:
     conda:
         "../../envs/contamination_screening/blast.yaml"
     log:
-        f"{LOGS}/unmapped_reads/blast_nt.log"
+        f"{LOGS}/blast/unmapped_reads/blast_nt.log"
     script:
         "../../scripts/contamination_screening/blast_unmapped_sequences.py"
 
