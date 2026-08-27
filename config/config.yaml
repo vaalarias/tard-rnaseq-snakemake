@@ -59,26 +59,14 @@ blast:
     - EAO-3
     - GAB-3
 
-  database: core_nt
+  database: /export/storage/data/blast/db/nt
   task: megablast
   evalue: 1e-10
   max_target_seqs: 5
-  remote: true
   
   samples:
     - EAO-3
     - GAB-3
-
-  database: nt
-  task: megablast
-  evalue: 1e-10
-  max_target_seqs: 5
-  remote: true
-
-  chunk_size: 10
-  max_retries: 3
-  retry_wait_seconds: 60
-  attempt_timeout_seconds: 1800
 
 ### Parameters for visualizations
 plots:

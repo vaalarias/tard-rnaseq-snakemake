@@ -35,6 +35,10 @@ time_sge = f"{hours:02d}:{minutes:02d}:00"
 
 os.makedirs("logs/sge", exist_ok=True)
 
+omit_h_vmem = int(
+    resources.get("omit_h_vmem", 0)
+) == 1
+
 log_out = f"logs/sge/{rule_name}.$JOB_ID.out"
 log_err = f"logs/sge/{rule_name}.$JOB_ID.err"
 
@@ -47,12 +51,21 @@ qsub_cmd = [
     "-e", log_err,
     "-N", f"smk_{rule_name}",
     "-pe", "smp", str(threads),
-    "-l", f"h_vmem={mem_per_slot_mb}M",
+]
+
+if not omit_h_vmem:
+    qsub_cmd.extend([
+        "-l",
+        f"h_vmem={mem_per_slot_mb}M",
+    ])
+
+qsub_cmd.extend([
     "-l", f"h_rt={time_sge}",
     "-q", queue,
     "-terse",
     jobscript,
-]
+])
+
 
 result = subprocess.run(
     qsub_cmd,

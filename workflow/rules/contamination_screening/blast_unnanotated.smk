@@ -58,7 +58,6 @@ rule combine_unmapped_blast_queries:
         test -s {output.fasta:q}
         """
 
-
 rule blast_unmapped_sequences:
     input:
         fasta = (
@@ -76,35 +75,14 @@ rule blast_unmapped_sequences:
         evalue = config["blast"]["evalue"],
         max_target_seqs = (
             config["blast"]["max_target_seqs"]
-        ),
-        chunk_size = (
-            config["blast"].get(
-                "chunk_size",
-                10
-            )
-        ),
-        max_retries = (
-            config["blast"].get(
-                "max_retries",
-                3
-            )
-        ),
-        retry_wait_seconds = (
-            config["blast"].get(
-                "retry_wait_seconds",
-                60
-            )
-        ),
-        attempt_timeout_seconds = (
-            config["blast"].get(
-                "attempt_timeout_seconds",
-                1800
-            )
         )
+    threads:
+        8
+
     resources:
-        mem_mb = 4000,
-        time_min = 720,
-        http = 1
+        mem_mb = 16000,
+        time_min = 60,
+        omit_h_vmem = 1
     conda:
         "../../envs/contamination_screening/blast.yaml"
     log:
