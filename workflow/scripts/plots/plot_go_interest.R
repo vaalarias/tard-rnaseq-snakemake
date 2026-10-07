@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 })
 
 # ============================================================
-# Configuration
+# Colours and GO categories
 # ============================================================
 
 colors_condition <- c(
@@ -30,6 +30,31 @@ deg_colors <- c(
   not_DEG = "gray85"
 )
 
+go_subcategory_colors <- c(
+  "RNA processing" = "#4E79A7",
+  "RNA splicing" = "#A0CBE8",
+  "mRNA processing" = "#59A14F",
+  "ribosome biogenesis" = "#8CD17D",
+  "DNA damage" = "#F28E2B",
+  "DNA repair" = "#FFBE7D",
+  "response to DNA damage" = "#B07AA1",
+  "response to stress" = "#E15759",
+  "stress response" = "#FF9D9A",
+  "oxidative stress" = "#9C755F",
+  "heat shock" = "#BAB0AC",
+  "chromatin" = "#76B7B2",
+  "histone" = "#86BCB6",
+  "nucleosome" = "#EDC948",
+  "chromosome organization" = "#B6992D",
+  "DNA methylation" = "#AF7AA1",
+  "histone modification" = "#D4A6C8",
+  "methyltransferase" = "#79706E",
+  "acetyltransferase" = "#D7B5A6",
+  "deacetylase" = "#9D7660",
+  "epigenetic" = "#C7C7C7",
+  "Other" = "grey80"
+)
+
 categories <- list(
   RNA_processing = c(
     "RNA processing",
@@ -37,20 +62,17 @@ categories <- list(
     "mRNA processing",
     "ribosome biogenesis"
   ),
-
   DNA_damage_response = c(
     "DNA damage",
     "DNA repair",
     "response to DNA damage"
   ),
-
   Stress_response = c(
     "response to stress",
     "stress response",
     "oxidative stress",
     "heat shock"
   ),
-
   Epigenetic_landscape = c(
     "chromatin",
     "histone",
@@ -65,11 +87,22 @@ categories <- list(
   )
 )
 
+category_levels <- names(categories)
+
+category_labels <- c(
+  RNA_processing = "RNA\nprocessing",
+  DNA_damage_response = "DNA damage\nresponse",
+  Stress_response = "Stress\nresponse",
+  Epigenetic_landscape = "Epigenetic\nlandscape"
+)
+
 # ============================================================
-# Read inputs
+# Inputs and output directory
 # ============================================================
 
-outdir <- snakemake@output[["go_dir"]]
+outdir <- as.character(
+  snakemake@output[["go_dir"]]
+)
 
 dir.create(
   outdir,
@@ -82,6 +115,9 @@ raw <- readRDS(
 )
 
 coldata <- raw$coldata
+coldata$sample <- as.character(coldata$sample)
+coldata$species <- as.character(coldata$species)
+coldata$condition <- as.character(coldata$condition)
 
 tpm <- as.matrix(
   readRDS(snakemake@input[["tpm"]])
@@ -89,424 +125,158 @@ tpm <- as.matrix(
 
 storage.mode(tpm) <- "numeric"
 
-res <- readRDS(
-  snakemake@input[["deseq_results"]]
+remove_ids <- readLines(
+  snakemake@input[["remove_ids"]],
+  warn = FALSE
 )
 
-annot_exp <- readRDS(
-  snakemake@input[["annot_exp"]]
+remove_ids <- unique(
+  toupper(
+    trimws(remove_ids)
+  )
 )
 
-annot_gad <- readRDS(
-  snakemake@input[["annot_gad"]]
-)
-
-term2gene <- as.data.frame(
-  readRDS(snakemake@input[["term2gene"]]),
-  stringsAsFactors = FALSE
-)
-
-term2name <- as.data.frame(
-  readRDS(snakemake@input[["term2name"]]),
-  stringsAsFactors = FALSE
-)
-
-required_coldata <- c(
-  "sample",
-  "species",
-  "condition"
-)
-
-missing_coldata <- setdiff(
-  required_coldata,
-  colnames(coldata)
-)
-
-if (length(missing_coldata)) {
-  stop(
-    "Missing coldata columns: ",
-    paste(missing_coldata, collapse = ", ")
-  )
-}
-
-if (!"GeneID" %in% colnames(annot_exp)) {
-  stop(
-    "experimentalis_annotated.rds has no GeneID column."
-  )
-}
-
-if (!"GeneID" %in% colnames(annot_gad)) {
-  stop(
-    "gadabouti_annotated.rds has no GeneID column."
-  )
-}
-
-if (ncol(term2gene) < 2) {
-  stop(
-    "TERM2GENE.rds must contain at least two columns."
-  )
-}
-
-if (ncol(term2name) < 2) {
-  stop(
-    "TERM2NAME.rds must contain at least two columns."
-  )
-}
-
-# ============================================================
-# General helpers
-# ============================================================
-
-clean_gene_key <- function(x) {
-  x <- trimws(
-    as.character(x)
-  )
-
-  x <- sub(
-    "^LOC",
-    "",
-    x,
-    ignore.case = TRUE
-  )
-
-  toupper(x)
-}
-
-# ============================================================
-# Read GAF and recover gene-product labels
-# ============================================================
-
-gaf_columns <- c(
-  "DB",
-  "DB_Object_ID",
-  "DB_Object_Symbol",
-  "Qualifier",
-  "GO_ID",
-  "DB_Reference",
-  "Evidence_Code",
-  "With_From",
-  "Aspect",
-  "DB_Object_Name",
-  "DB_Object_Synonym",
-  "DB_Object_Type",
-  "Taxon",
-  "Date",
-  "Assigned_By",
-  "Annotation_Extension",
-  "Gene_Product_Form_ID"
-)
-
-gaf <- read.delim(
-  snakemake@input[["gaf"]],
-  comment.char = "!",
-  header = FALSE,
-  sep = "\t",
-  stringsAsFactors = FALSE,
-  quote = "",
-  fill = TRUE,
-  check.names = FALSE
-)
-
-if (ncol(gaf) < 15) {
-  stop(
-    "Invalid GAF: expected at least 15 columns, found ",
-    ncol(gaf)
-  )
-}
-
-if (ncol(gaf) > length(gaf_columns)) {
-  stop(
-    "Invalid GAF: expected no more than ",
-    length(gaf_columns),
-    " columns, found ",
-    ncol(gaf)
-  )
-}
-
-colnames(gaf) <- gaf_columns[
-  seq_len(ncol(gaf))
+remove_ids <- remove_ids[
+  !is.na(remove_ids) & nzchar(remove_ids)
 ]
 
-gaf <- gaf %>%
-  mutate(
-    across(
-      c(
-        DB_Object_ID,
-        DB_Object_Symbol,
-        DB_Object_Name,
-        Taxon
-      ),
-      as.character
+
+# ============================================================
+# Read the old-style final DEG annotation tables
+# ============================================================
+
+read_final_annotation <- function(path) {
+  readr::read_delim(
+    file = path,
+    delim = ";",
+    locale = readr::locale(
+      decimal_mark = ","
     ),
-
-    gene_product = case_when(
-      !is.na(DB_Object_Name) &
-        nzchar(trimws(DB_Object_Name)) &
-        DB_Object_Name != "-" ~ DB_Object_Name,
-
-      !is.na(DB_Object_Symbol) &
-        nzchar(trimws(DB_Object_Symbol)) &
-        DB_Object_Symbol != "-" ~ DB_Object_Symbol,
-
-      TRUE ~ as.character(DB_Object_ID)
-    )
-  )
-  
-gaf_gene_labels <- bind_rows(
-  gaf %>%
-    transmute(
-      gene_key = clean_gene_key(DB_Object_ID),
-      gene_product
-    ),
-
-  gaf %>%
-    transmute(
-      gene_key = clean_gene_key(DB_Object_Symbol),
-      gene_product
-    )
-) %>%
-  filter(
-    !is.na(gene_key),
-    nzchar(gene_key),
-    !is.na(gene_product),
-    nzchar(gene_product),
-    gene_product != "-"
+    show_col_types = FALSE,
+    progress = FALSE,
+    trim_ws = TRUE,
+    name_repair = "unique"
   ) %>%
-  distinct(
-    gene_key,
-    .keep_all = TRUE
-  )
+    as.data.frame(
+      stringsAsFactors = FALSE
+    )
+}
 
-message(
-  "Gene labels recovered from GAF: ",
-  nrow(gaf_gene_labels)
-)
-
-# ============================================================
-# Save GAF taxon summary
-# ============================================================
-
-taxon <- sub(
-  "taxon:",
-  "",
-  gaf$Taxon
-)
-
-taxon_summary <- as.data.frame(
-  table(taxon),
-  stringsAsFactors = FALSE
-)
-
-colnames(taxon_summary) <- c(
-  "Taxon",
-  "n"
-)
-
-taxon_summary$percent <- (
-  taxon_summary$n /
-    sum(taxon_summary$n)
-) * 100
-
-taxon_summary <- taxon_summary[
-  order(-taxon_summary$n),
-  ,
-  drop = FALSE
-]
-
-write.csv(
-  taxon_summary,
-  file.path(
-    outdir,
-    "GAF_taxon_summary.csv"
+final_tables <- list(
+  experimentalis = read_final_annotation(
+    snakemake@input[["exp_final"]]
   ),
-  row.names = FALSE
+  gadabouti = read_final_annotation(
+    snakemake@input[["gad_final"]]
+  )
 )
 
-# ============================================================
-# Prepare TERM2GENE and TERM2NAME
-# ============================================================
-
-term2gene <- term2gene[
-  ,
-  1:2,
-  drop = FALSE
-]
-
-colnames(term2gene) <- c(
-  "GO_ID",
-  "annotation_gene_id"
+required_final_columns <- c(
+  "Gene_Symbol",
+  "log2FoldChange",
+  "padj",
+  "GO_Terms",
+  "GO_Term_Description",
+  "GTF_annotation",
+  "Protein_ID"
 )
 
-term2name <- term2name[
-  ,
-  1:2,
-  drop = FALSE
-]
-
-colnames(term2name) <- c(
-  "GO_ID",
-  "GO_Term_Description"
-)
-
-term2gene <- term2gene %>%
-  mutate(
-    GO_ID = as.character(GO_ID),
-
-    annotation_gene_id = as.character(
-      annotation_gene_id
-    ),
-
-    gene_key = clean_gene_key(
-      annotation_gene_id
-    )
-  ) %>%
-  filter(
-    !is.na(GO_ID),
-    nzchar(GO_ID),
-    !is.na(gene_key),
-    nzchar(gene_key)
-  ) %>%
-  distinct(
-    GO_ID,
-    gene_key,
-    .keep_all = TRUE
+prepare_final_annotation <- function(x, species_name) {
+  missing_columns <- setdiff(
+    required_final_columns,
+    colnames(x)
   )
 
-term2name <- term2name %>%
-  mutate(
-    GO_ID = as.character(GO_ID),
-
-    GO_Term_Description = as.character(
-      GO_Term_Description
+  if (length(missing_columns)) {
+    stop(
+      "Missing columns in ",
+      species_name,
+      ": ",
+      paste(missing_columns, collapse = ", ")
     )
-  ) %>%
-  filter(
-    !is.na(GO_ID),
-    nzchar(GO_ID)
-  ) %>%
-  distinct(
-    GO_ID,
-    .keep_all = TRUE
-  )
+  }
 
-go_annotations <- term2gene %>%
-  left_join(
-    term2name,
-    by = "GO_ID"
-  )
-
-# ============================================================
-# Match annotation GeneIDs against GO mappings
-# ============================================================
-
-make_gene_lookup <- function(annotation_table) {
-  annotation_table %>%
-    transmute(
-      GeneID = as.character(GeneID),
-
-      gene_key = clean_gene_key(
-        GeneID
-      )
-    ) %>%
-    filter(
-      !is.na(GeneID),
-      nzchar(GeneID),
-      !is.na(gene_key),
-      nzchar(gene_key)
-    ) %>%
-    distinct(
-      gene_key,
-      .keep_all = TRUE
-    )
-}
-
-lookup_exp <- make_gene_lookup(
-  annot_exp
-)
-
-lookup_gad <- make_gene_lookup(
-  annot_gad
-)
-
-make_species_annotation <- function(gene_lookup) {
-  go_annotations %>%
-    inner_join(
-      gene_lookup,
-      by = "gene_key"
-    ) %>%
-    left_join(
-      gaf_gene_labels,
-      by = "gene_key"
-    ) %>%
+  x <- x %>%
     mutate(
+      GeneID = trimws(
+        as.character(Gene_Symbol)
+      ),
+      gene_key = toupper(GeneID),
       gene_label = case_when(
-        !is.na(gene_product) &
-          nzchar(gene_product) ~ paste0(
-            gene_product,
+        !is.na(GTF_annotation) &
+          nzchar(trimws(GTF_annotation)) ~ paste0(
+            GTF_annotation,
             " [",
             GeneID,
             "]"
           ),
-
+        !is.na(Protein_ID) &
+          nzchar(trimws(Protein_ID)) ~ paste0(
+            Protein_ID,
+            " [",
+            GeneID,
+            "]"
+          ),
         TRUE ~ GeneID
       )
-    ) %>%
-    select(
-      GeneID,
-      GO_ID,
-      GO_Term_Description,
-      annotation_gene_id,
-      gene_product,
-      gene_label
-    ) %>%
-    distinct()
+    )
+
+  excluded <- x$gene_key %in% remove_ids
+
+  message(
+    species_name,
+    ": ",
+    nrow(x),
+    " final DEGs loaded; ",
+    sum(excluded),
+    " excluded IDs removed; ",
+    sum(!excluded),
+    " retained"
+  )
+
+  x[
+    !excluded,
+    ,
+    drop = FALSE
+  ]
 }
 
-go_exp <- make_species_annotation(
-  lookup_exp
-)
-
-go_gad <- make_species_annotation(
-  lookup_gad
-)
-
-message(
-  "GO-annotated experimentalis genes: ",
-  n_distinct(go_exp$GeneID)
-)
-
-message(
-  "GO-annotated gadabouti genes: ",
-  n_distinct(go_gad$GeneID)
+final_tables <- imap(
+  final_tables,
+  prepare_final_annotation
 )
 
 # ============================================================
-# Select GO categories of interest
+# Identify GO-interest rows as in the previous notebook
 # ============================================================
 
-filter_interest <- function(df) {
-  if (!nrow(df)) {
-    df$GO_category <- character(0)
-    return(df)
-  }
+filter_go_interest <- function(df) {
+  df <- as_tibble(df) %>%
+    mutate(
+      across(
+        everything(),
+        as.character
+      )
+    )
 
-  imap_dfr(
+  purrr::imap_dfr(
     categories,
     function(patterns, category_name) {
-      category_pattern <- paste(
+      regex_pattern <- paste(
         patterns,
         collapse = "|"
       )
 
       df %>%
         filter(
-          !is.na(GO_Term_Description),
-
-          str_detect(
-            GO_Term_Description,
-            regex(
-              category_pattern,
-              ignore_case = TRUE
+          if_any(
+            everything(),
+            ~ str_detect(
+              .x,
+              regex(
+                regex_pattern,
+                ignore_case = TRUE
+              )
             )
           )
         ) %>%
@@ -518,39 +288,40 @@ filter_interest <- function(df) {
     distinct()
 }
 
-interest <- list(
-  experimentalis = filter_interest(
-    go_exp
-  ),
-
-  gadabouti = filter_interest(
-    go_gad
-  )
-)
-
-# ============================================================
-# Assign GO subcategories
-# ============================================================
-
-assign_subcategory <- function(df) {
+assign_go_subcategory <- function(df) {
   if (!nrow(df)) {
     df$GO_subcategory <- character(0)
     return(df)
   }
 
-  description <- as.character(
-    df$GO_Term_Description
+  annotation_text <- paste(
+    ifelse(
+      is.na(df$GO_Term_Description),
+      "",
+      df$GO_Term_Description
+    ),
+    ifelse(
+      is.na(df$GO_Terms),
+      "",
+      df$GO_Terms
+    ),
+    ifelse(
+      is.na(df$GTF_annotation),
+      "",
+      df$GTF_annotation
+    ),
+    sep = " "
   )
 
   result <- rep(
-    "Other",
+    NA_character_,
     nrow(df)
   )
 
   for (category_name in names(categories)) {
     for (term in categories[[category_name]]) {
       matched <- str_detect(
-        description,
+        annotation_text,
         regex(
           term,
           ignore_case = TRUE
@@ -558,46 +329,55 @@ assign_subcategory <- function(df) {
       )
 
       result[
-        matched &
-          result == "Other"
+        matched & is.na(result)
       ] <- term
     }
   }
 
+  result[is.na(result)] <- "Other"
   df$GO_subcategory <- result
   df
 }
 
-interest <- lapply(
-  interest,
-  assign_subcategory
-)
+interest <- final_tables %>%
+  map(filter_go_interest) %>%
+  map(assign_go_subcategory)
 
-# ============================================================
-# Save GO-interest tables with gene labels
-# ============================================================
+for (species_name in names(interest)) {
+  message(
+    species_name,
+    ": ",
+    n_distinct(interest[[species_name]]$GeneID),
+    " unique GO-interest DEGs"
+  )
 
-write_csv(
-  interest$experimentalis,
-  file.path(
-    outdir,
-    "experimentalis_GO_interest.csv"
+  readr::write_csv(
+    interest[[species_name]],
+    file.path(
+      outdir,
+      paste0(
+        species_name,
+        "_GO_interest.csv"
+      )
+    )
+  )
+}
+
+message(
+  "GO-interest DEG union: ",
+  n_distinct(
+    c(
+      interest$experimentalis$GeneID,
+      interest$gadabouti$GeneID
+    )
   )
 )
 
-write_csv(
-  interest$gadabouti,
-  file.path(
-    outdir,
-    "gadabouti_GO_interest.csv"
-  )
-)
-
 # ============================================================
-# Construct heatmap row metadata
+# Heatmap metadata
 # ============================================================
 
-make_rows <- function(df, species) {
+make_rows <- function(df) {
   if (!nrow(df)) {
     return(
       tibble(
@@ -610,52 +390,24 @@ make_rows <- function(df, species) {
     )
   }
 
-  x <- df %>%
+  df %>%
     transmute(
       gene_id = as.character(GeneID),
-
-      label = case_when(
-        !is.na(gene_label) &
-          nzchar(gene_label) ~ gene_label,
-
-        TRUE ~ as.character(GeneID)
-      ),
-
+      label = as.character(gene_label),
       GO_category,
-      GO_subcategory
+      GO_subcategory,
+      DEG = "DEG"
     ) %>%
     distinct(
       gene_id,
       GO_category,
       .keep_all = TRUE
     )
-
-  species_results <- res[[species]]
-
-  significant_genes <- species_results$GeneID[
-    !is.na(species_results$sig) &
-      species_results$sig == "yes"
-  ]
-
-  x$DEG <- ifelse(
-    x$gene_id %in% significant_genes,
-    "DEG",
-    "not_DEG"
-  )
-
-  x
 }
 
-rows <- list(
-  experimentalis = make_rows(
-    interest$experimentalis,
-    "experimentalis"
-  ),
-
-  gadabouti = make_rows(
-    interest$gadabouti,
-    "gadabouti"
-  )
+rows <- map(
+  interest,
+  make_rows
 )
 
 # ============================================================
@@ -670,12 +422,11 @@ plot_heat <- function(
 ) {
   if (!nrow(row_metadata)) {
     message(
-      "No GO-interest rows for ",
+      "No rows for ",
       species_name,
       " | ",
       mode
     )
-
     return(FALSE)
   }
 
@@ -688,16 +439,6 @@ plot_heat <- function(
     colnames(tpm)
   )
 
-  if (!length(samples)) {
-    message(
-      "No TPM samples for ",
-      species_name
-    )
-
-    return(FALSE)
-  }
-
-  # One row per gene in each heatmap.
   row_metadata <- row_metadata %>%
     distinct(
       gene_id,
@@ -709,26 +450,22 @@ plot_heat <- function(
     rownames(tpm)
   )
 
-  if (!length(genes)) {
+  if (!length(samples) || !length(genes)) {
     message(
-      "No GO-interest genes overlap TPM for ",
+      "No overlapping TPM data for ",
       species_name
     )
-
     return(FALSE)
   }
 
   annotation_rows <- row_metadata[
-    match(
-      genes,
-      row_metadata$gene_id
-    ),
+    match(genes, row_metadata$gene_id),
     ,
     drop = FALSE
   ]
 
   expression_matrix <- tpm[
-    annotation_rows$gene_id,
+    genes,
     samples,
     drop = FALSE
   ]
@@ -751,18 +488,8 @@ plot_heat <- function(
   ]
 
   if (!nrow(expression_matrix)) {
-    message(
-      "All GO-interest genes have zero TPM for ",
-      species_name
-    )
-
     return(FALSE)
   }
-
-  category_levels <- c(
-    names(categories),
-    "Other"
-  )
 
   annotation_rows$GO_category <- factor(
     annotation_rows$GO_category,
@@ -792,37 +519,29 @@ plot_heat <- function(
       expression_matrix + 1
     )
 
-    values <- as.numeric(
-      plot_matrix
+    values <- as.numeric(plot_matrix)
+    values <- values[is.finite(values)]
+
+    breaks <- as.numeric(
+      quantile(
+        values,
+        c(0, 0.5, 0.95),
+        na.rm = TRUE
+      )
     )
 
-    values <- values[
-      is.finite(values)
-    ]
-
-    quantiles <- quantile(
-      values,
-      c(0, 0.5, 0.95),
-      na.rm = TRUE
-    )
-
-    if (length(unique(quantiles)) < 3) {
+    if (length(unique(breaks)) < 3) {
       value_range <- range(
         values,
         na.rm = TRUE
       )
-
       if (
         !all(is.finite(value_range)) ||
-          value_range[1] == value_range[2]
+        value_range[1] == value_range[2]
       ) {
-        value_range <- c(
-          0,
-          1
-        )
+        value_range <- c(0, 1)
       }
-
-      quantiles <- seq(
+      breaks <- seq(
         value_range[1],
         value_range[2],
         length.out = 3
@@ -830,7 +549,7 @@ plot_heat <- function(
     }
 
     color_function <- colorRamp2(
-      quantiles,
+      breaks,
       c(
         "white",
         "#fee08b",
@@ -848,19 +567,14 @@ plot_heat <- function(
       )
     )
 
-    plot_matrix[
-      !is.finite(plot_matrix)
-    ] <- 0
+    plot_matrix[!is.finite(plot_matrix)] <- 0
 
     limit <- max(
       abs(plot_matrix),
       na.rm = TRUE
     )
 
-    if (
-      !is.finite(limit) ||
-        limit == 0
-    ) {
+    if (!is.finite(limit) || limit == 0) {
       limit <- 1
     }
 
@@ -881,14 +595,12 @@ plot_heat <- function(
     )
   }
 
-  condition_values <- as.character(
-    coldata$condition[
-      match(
-        colnames(plot_matrix),
-        coldata$sample
-      )
-    ]
-  )
+  condition_values <- coldata$condition[
+    match(
+      colnames(plot_matrix),
+      coldata$sample
+    )
+  ]
 
   unknown_conditions <- setdiff(
     unique(condition_values),
@@ -897,51 +609,38 @@ plot_heat <- function(
 
   if (length(unknown_conditions)) {
     stop(
-      "Conditions without colors: ",
-      paste(
-        unknown_conditions,
-        collapse = ", "
-      )
+      "Conditions without colours: ",
+      paste(unknown_conditions, collapse = ", ")
     )
   }
-
-  top_annotation <- HeatmapAnnotation(
-    Condition = condition_values,
-    col = list(
-      Condition = colors_condition
-    )
-  )
-
-  left_annotation <- rowAnnotation(
-    GO = annotation_rows$GO_category,
-    DEG = annotation_rows$DEG,
-    col = list(
-      GO = go_colors,
-      DEG = deg_colors
-    )
-  )
 
   heatmap <- Heatmap(
     plot_matrix,
     name = legend_name,
     col = color_function,
-    top_annotation = top_annotation,
-    left_annotation = left_annotation,
-
-    # Gene product/annotation, not GO description.
+    top_annotation = HeatmapAnnotation(
+      Condition = condition_values,
+      col = list(
+        Condition = colors_condition
+      )
+    ),
+    left_annotation = rowAnnotation(
+      GO = annotation_rows$GO_category,
+      DEG = annotation_rows$DEG,
+      col = list(
+        GO = go_colors,
+        DEG = deg_colors
+      )
+    ),
     row_labels = annotation_rows$label,
-
     show_row_names = TRUE,
     show_column_names = TRUE,
     cluster_rows = FALSE,
     cluster_columns = TRUE,
-
-    row_names_gp = gpar(
-      fontsize = 6
-    ),
-
+    row_names_gp = gpar(fontsize = 6),
+    column_names_gp = gpar(fontsize = 10),
     column_title = paste(
-      "GO interest genes",
+      "GO-interest DEGs",
       species_name,
       mode,
       sep = " | "
@@ -978,105 +677,50 @@ plot_heat <- function(
 }
 
 # ============================================================
-# Generate heatmaps and summaries
+# Generate heatmaps
 # ============================================================
 
-summary_list <- list()
-
 for (species_name in names(rows)) {
-  deg_rows <- rows[[species_name]][
-    rows[[species_name]]$DEG == "DEG",
-    ,
-    drop = FALSE
-  ]
+  species_rows <- rows[[species_name]]
 
-  summary_list[[species_name]] <- deg_rows %>%
-    distinct(
-      gene_id,
-      GO_category,
-      GO_subcategory
-    ) %>%
-    count(
-      GO_category,
-      GO_subcategory,
-      name = "n"
-    ) %>%
-    mutate(
-      species = species_name
+  for (mode in c("logTPM", "zscore_logTPM")) {
+    plot_heat(
+      species_name,
+      species_rows,
+      mode,
+      file.path(
+        outdir,
+        "DEG_only",
+        paste0(
+          species_name,
+          "_GO_interest_DEG_only_",
+          mode,
+          ".pdf"
+        )
+      )
     )
+  }
 
-  for (category_name in names(categories)) {
-    category_rows <- rows[[species_name]][
-      rows[[species_name]]$GO_category ==
-        category_name,
+  for (category_name in category_levels) {
+    category_rows <- species_rows[
+      species_rows$GO_category == category_name,
       ,
       drop = FALSE
     ]
 
-    for (mode in c(
-      "logTPM",
-      "zscore_logTPM"
-    )) {
+    for (mode in c("logTPM", "zscore_logTPM")) {
       plot_heat(
         species_name,
         category_rows,
         mode,
         file.path(
           outdir,
-          paste0(
-            species_name,
-            "_",
-            category_name,
-            "_",
-            mode,
-            ".pdf"
-          )
-        )
-      )
-
-      category_deg_rows <- category_rows[
-        category_rows$DEG == "DEG",
-        ,
-        drop = FALSE
-      ]
-
-      if (nrow(category_deg_rows)) {
-        plot_heat(
-          species_name,
-          category_deg_rows,
-          mode,
-          file.path(
-            outdir,
-            "DEG_only",
-            "by_category",
-            category_name,
-            paste0(
-              species_name,
-              "_",
-              mode,
-              ".pdf"
-            )
-          )
-        )
-      }
-    }
-  }
-
-  for (mode in c(
-    "logTPM",
-    "zscore_logTPM"
-  )) {
-    if (nrow(deg_rows)) {
-      plot_heat(
-        species_name,
-        deg_rows,
-        mode,
-        file.path(
-          outdir,
           "DEG_only",
+          "by_category",
+          category_name,
           paste0(
             species_name,
-            "_GO_interest_DEG_only_",
+            "_",
             mode,
             ".pdf"
           )
@@ -1087,11 +731,27 @@ for (species_name in names(rows)) {
 }
 
 # ============================================================
-# GO DEG summary
+# GO-interest summary and barplots
 # ============================================================
 
-summary_table <- bind_rows(
-  summary_list
+summary_table <- imap_dfr(
+  interest,
+  function(df, species_name) {
+    df %>%
+      distinct(
+        GeneID,
+        GO_category,
+        GO_subcategory
+      ) %>%
+      count(
+        GO_category,
+        GO_subcategory,
+        name = "n"
+      ) %>%
+      mutate(
+        species = species_name
+      )
+  }
 )
 
 summary_dir <- file.path(
@@ -1114,11 +774,14 @@ write.csv(
   row.names = FALSE
 )
 
-if (nrow(summary_table)) {
-  summary_plot <- ggplot(
-    summary_table,
+make_summary_plot <- function(plot_data, title_text) {
+  ggplot(
+    plot_data,
     aes(
-      x = GO_category,
+      x = factor(
+        GO_category,
+        levels = category_levels
+      ),
       y = n,
       fill = GO_subcategory
     )
@@ -1132,54 +795,86 @@ if (nrow(summary_table)) {
       position = position_stack(
         vjust = 0.5
       ),
-      size = 3
+      size = 3,
+      color = "black"
     ) +
-    facet_wrap(
-      ~ species
+    scale_fill_manual(
+      values = go_subcategory_colors,
+      na.value = "grey80",
+      drop = FALSE
+    ) +
+    scale_x_discrete(
+      labels = category_labels
     ) +
     theme_bw(
       base_size = 11
     ) +
     theme(
       axis.text.x = element_text(
-        angle = 35,
-        hjust = 1
+        angle = 0,
+        hjust = 0.5
       ),
-
-      panel.grid.major.x = element_blank()
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.position = "right"
     ) +
     labs(
-      title = "GO interest categories among DEGs",
+      title = title_text,
       x = "GO category",
-      y = "Number of DEG genes",
+      y = "Number of DE genes",
       fill = "GO term group"
     )
+}
+
+combined_plot <- make_summary_plot(
+  summary_table,
+  "GO-interest categories among DEGs"
+) +
+  facet_wrap(
+    ~ species
+  )
+
+ggsave(
+  file.path(
+    summary_dir,
+    "GO_interest_DEG_barplot.pdf"
+  ),
+  plot = combined_plot,
+  width = 12,
+  height = 6,
+  dpi = 300
+)
+
+for (species_name in unique(summary_table$species)) {
+  species_summary <- summary_table %>%
+    filter(
+      species == species_name
+    )
+
+  species_plot <- make_summary_plot(
+    species_summary,
+    paste(
+      "GO-interest categories —",
+      species_name
+    )
+  )
 
   ggsave(
     file.path(
       summary_dir,
-      "GO_interest_DEG_barplot.pdf"
+      paste0(
+        "GO_interest_DEG_barplot_",
+        species_name,
+        ".pdf"
+      )
     ),
-    summary_plot,
-    width = 12,
+    plot = species_plot,
+    width = 10,
     height = 6,
     dpi = 300
   )
-} else {
-  pdf(
-    file.path(
-      summary_dir,
-      "GO_interest_DEG_barplot.pdf"
-    ),
-    width = 8,
-    height = 5
-  )
-
-  plot.new()
-
-  title(
-    main = "No GO interest categories found among DEGs"
-  )
-
-  dev.off()
 }
+
+message(
+  "GO-interest analysis completed successfully."
+)

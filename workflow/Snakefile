@@ -32,7 +32,7 @@ NORMALIZATION = f"{OUTDIR}/normalization"
 ANNOTATION = f"{OUTDIR}/annotation"
 PLOTS = f"{OUTDIR}/plots"
 
-# Alignment and annotation files
+# Main reference genome and annotation
 GENOME = config["refs"]["genome_fa"]
 GTF = config["refs"]["gtf"]
 TRANSCRIPTOME = config["refs"]["transcriptome_fa"]
@@ -43,10 +43,27 @@ SALMON_INDEX = config["refs"]["salmon_index"]
 DECOY = config["refs"]["decoy"]
 GENTROME = config["refs"]["gentrome"]
 
+# Candidate reference genome assessment
+REFERENCE_ASSESSMENT = config.get("reference_assessment", {})
+REFERENCE_ASSESSMENT_ENABLED = REFERENCE_ASSESSMENT.get("enabled", False)
+
+CANDIDATE_CONFIG = REFERENCE_ASSESSMENT.get("candidates", {})
+CANDIDATES = list(CANDIDATE_CONFIG.keys())
+
+REFERENCE_ASSESSMENT_DIR = f"{OUTDIR}/reference_assessment"
+BUSCO_DIR = f"{REFERENCE_ASSESSMENT_DIR}/busco"
+TRIAL_INDEX_DIR = f"{REFERENCE_ASSESSMENT_DIR}/star_index"
+TRIAL_ALIGN_DIR = f"{REFERENCE_ASSESSMENT_DIR}/trial_mapping"
+REFERENCE_SUMMARY_DIR = f"{REFERENCE_ASSESSMENT_DIR}/summary"
+TRIAL_SUBSAMPLE_DIR = f"{REFERENCE_ASSESSMENT_DIR}/subsampled_reads"
+TRIAL_ALIGN_SUBSAMPLED_DIR = f"{REFERENCE_ASSESSMENT_DIR}/trial_mapping_subsampled"
+
+lambda wc: CANDIDATE_CONFIG[wc.genome]["fasta"]
+lambda wc: CANDIDATE_CONFIG[wc.genome]["accession"]
+
 # Aligner
 ALIGNER = config["aligner"]
 SALMON = config.get("salmon", False)
-
 
 ## General Rules
 include: "rules/input_functions.smk"
@@ -55,6 +72,7 @@ include: "rules/targets.smk"
 ### Preprocessing and quality control
 include: "rules/preprocessing/preprocess.smk"
 include: "rules/preprocessing/qc.smk"
+include: "rules/preprocessing/reference_assessment.smk"
 
 ### Contamination screening
 include: "rules/contamination_screening/kraken2.smk"
@@ -64,7 +82,7 @@ include: "rules/contamination_screening/blast_unnanotated.smk"
 include: "rules/alignment/align.smk"
 include: "rules/alignment/counts.smk"
 
-## Normalization and Differential expression analysis
+## Normalization and differential expression analysis
 include: "rules/dea/deseq2.smk"
 include: "rules/dea/targets_plots.smk"
 include: "rules/dea/plots.smk"
@@ -72,11 +90,9 @@ include: "rules/dea/plots.smk"
 ## Summary
 include: "rules/preprocessing/multiqc.smk"
 
-## Analysis and Figures
 
 # Rule all
 rule all_targets:
     input:
-        targets(),
-        plot_targets()
+        targets()
     default_target: True

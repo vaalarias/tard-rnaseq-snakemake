@@ -14,6 +14,45 @@ refs:
   decoy: "config/ref/decoys.txt"
   gentrome: "config/ref/gentrome.fa.gz"
   gaf: "config/ref/GCF_019649055.1-RS_2023_04_gene_ontology.gaf"
+  remove_ids: "config/ref/remove_ids_060626.txt"
+
+## Candidate reference genome assessment
+reference_assessment:
+  enabled: true
+
+  candidates:
+    Hyp_dujardini:
+      fasta: "config/ref/candidates/Hyp_dujardini.fasta"
+      accession: "GCA_001579985.1"
+
+    Hyp_exemplaris:
+      fasta: "config/ref/candidates/Hyp_exemplaris.fasta"
+      accession: "GCA_002082055.1"
+
+    Pam_metropolitanus:
+      fasta: "config/ref/candidates/Pam_metropolitanus.fasta"
+      accession: "GCF_019649055.1"
+
+    Par_richtersi:
+      fasta: "config/ref/candidates/Par_richtersi.fasta"
+      accession: "GCA_034698045.1"
+
+    Ram_varieornatus:
+      fasta: "config/ref/candidates/Ram_varieornatus.fasta"
+      accession: "GCA_001949185.1"
+
+  busco:
+    enabled: true
+    lineage: "metazoa_odb10"
+    mode: "genome"
+    predictor: "metaeuk"
+
+  trial_mapping:
+    enabled: true
+    aligner: "star"
+    star_params: "--outSAMtype None"
+    subsample_n: 2000000
+    subsample_seed: 42
 
 ### Aligner and quantification specific parameters
 aligner: "star"   # or  "hisat2"
@@ -26,18 +65,7 @@ params:
   salmon_k: 31
   featurecounts: "-p"
 
-### Downstream Analysis Parameters
-deseq2:
-  counts_method: "featurecounts"  # "featurecounts" or "salmon"
-  # Design formula (as used in DESeq2)
-  design: "~ condition + species"
-  contrasts:
-   - ["condition", "anhydrobiosis", "control"]
-
-  padj_threshold: 0.05
-  log2fc_threshold: 1.6
-
-### Kraken2 parameters
+### Contamination screening parameters
 kraken2:
   db: "/lustre/groups/ife/workspace/schneider/valentina.ojeda/db/custom"
   confidence: 0.05
@@ -56,17 +84,34 @@ unmapped_reads:
   
 blast:
   samples:
+    - EAO-1
+    - EAO-2
     - EAO-3
-    - GAB-3
+    - ECO-3
+    - ECO-4
+    - ECO-5
+    - GAB-1
+    - GAB-2
+    - GCB-1
+    - GCO-1
+    - GCB-2
 
   database: /export/storage/data/blast/db/nt
   task: megablast
   evalue: 1e-10
   max_target_seqs: 5
-  
-  samples:
-    - EAO-3
-    - GAB-3
+
+### Downstream Analysis Parameters
+deseq2:
+  counts_method: "featurecounts"  # "featurecounts" or "salmon"
+  # Design formula (as used in DESeq2)
+  design: "~ condition"
+  contrasts:
+   - ["condition", "anhydrobiosis", "control"]
+
+  padj_threshold: 0.05
+  log2fc_threshold: 1.6
+
 
 ### Parameters for visualizations
 plots:
@@ -87,13 +132,9 @@ plots:
       sig_up: "#e41a1c"
       sig_down: "#377eb8"
       nonsig: "grey70"
-    venn:
-      colors: ["#1b9e77", "#d95f02", "#7570b3"]
-
-  thresholds:
-    padj: 0.05
-    log2fc: 1.6
-    plots:
+    species:
+        gadabouti: "#4b2588ff"
+        experimentalis: "#56b4e9"
 
   species:
     - experimentalis

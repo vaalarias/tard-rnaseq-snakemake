@@ -87,16 +87,66 @@ rule go_enrichment:
         term2gene = rules.annotate_genes.output.term2gene,
         term2name = rules.annotate_genes.output.term2name,
         config = "config/config.yaml"
+
     output:
-        exp_up_pdf = f"{PLOTS}/enrichment/experimentalis_up_go.pdf",
-        exp_down_pdf = f"{PLOTS}/enrichment/experimentalis_down_go.pdf",
-        gad_up_pdf = f"{PLOTS}/enrichment/gadabouti_up_go.pdf",
-        gad_down_pdf = f"{PLOTS}/enrichment/gadabouti_down_go.pdf"
+        exp_up_pdf = (
+            f"{PLOTS}/enrichment/"
+            "experimentalis_up_go.pdf"
+        ),
+        exp_down_pdf = (
+            f"{PLOTS}/enrichment/"
+            "experimentalis_down_go.pdf"
+        ),
+        gad_up_pdf = (
+            f"{PLOTS}/enrichment/"
+            "gadabouti_up_go.pdf"
+        ),
+        gad_down_pdf = (
+            f"{PLOTS}/enrichment/"
+            "gadabouti_down_go.pdf"
+        ),
+
+        exp_up_csv = (
+            f"{DESEQ}/enrichment/"
+            "experimentalis_up_go.csv"
+        ),
+        exp_down_csv = (
+            f"{DESEQ}/enrichment/"
+            "experimentalis_down_go.csv"
+        ),
+        gad_up_csv = (
+            f"{DESEQ}/enrichment/"
+            "gadabouti_up_go.csv"
+        ),
+        gad_down_csv = (
+            f"{DESEQ}/enrichment/"
+            "gadabouti_down_go.csv"
+        ),
+
+        exp_up_rds = (
+            f"{DESEQ}/enrichment/"
+            "experimentalis_up_go.rds"
+        ),
+        exp_down_rds = (
+            f"{DESEQ}/enrichment/"
+            "experimentalis_down_go.rds"
+        ),
+        gad_up_rds = (
+            f"{DESEQ}/enrichment/"
+            "gadabouti_up_go.rds"
+        ),
+        gad_down_rds = (
+            f"{DESEQ}/enrichment/"
+            "gadabouti_down_go.rds"
+        )
+
     resources:
         mem_mb = 8000,
         time_min = 60
+
     conda:
         "../../envs/dea/r_dea.yaml"
+
     script:
         "../../scripts/dea/go_enrichment.R"
 
@@ -128,3 +178,25 @@ rule qc_summary:
         "../../envs/dea/r_dea.yaml"
     script:
         "../../scripts/plots/qc_summary.R"
+
+rule build_final_annotated_deg_lists:
+    input:
+        exp_results = rules.run_deseq2.output.exp_results,
+        gad_results = rules.run_deseq2.output.gad_results,
+        gaf = config["refs"]["gaf"],
+        gtf = config["refs"]["gtf"],
+        term2name = rules.annotate_genes.output.term2name,
+        config = "config/config.yaml"
+    output:
+        exp = (
+            f"{ANNOTATION}/"
+            "experimentalis_final_gene_list_annotated.csv"
+        ),
+        gad = (
+            f"{ANNOTATION}/"
+            "gadabouti_final_gene_list_annotated.csv"
+        )
+    conda:
+        "../../envs/dea/r_dea.yaml"
+    script:
+        "../../scripts/dea/build_final_annotated_deg_lists.R"

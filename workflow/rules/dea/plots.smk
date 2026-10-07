@@ -158,8 +158,7 @@ rule plot_pca:
         raw_counts = f"{DESEQ}/raw_counts_fc.rds",
         plot_metadata = "config/plot_metadata.yaml"
     output:
-        total = f"{PLOTS}/pca_vst.pdf",
-        species = expand(f"{PLOTS}/pca_{{species}}.pdf", species=PLOT_SPECIES)
+        plot = f"{PLOTS}/pca_panel.pdf"
     conda:
         "../../envs/plots/plots.yml"
     script:
@@ -177,44 +176,66 @@ rule plot_sample_correlation:
     script:
         "../../scripts/plots/plot_sample_correlation.R"
 
-
-rule plot_deg_heatmaps:
+rule summarize_shared_de_response:
     input:
-        deseq_results = f"{DESEQ}/deseq_results_by_species.rds",
-        vst_list = rules.build_species_de_objects.output.vst_list,
-        raw_counts = f"{DESEQ}/raw_counts_fc.rds"
+        deseq_results = (
+            f"{DESEQ}/deseq_results_by_species.rds"
+        )
     output:
-        expand(f"{PLOTS}/heatmap_DEGs_{{species}}.pdf", species=PLOT_SPECIES)
+        gene_table = (
+            f"{DESEQ}/shared_response/"
+            "de_gene_classification.csv"
+        ),
+        response_summary = (
+            f"{DESEQ}/shared_response/"
+            "de_response_summary.csv"
+        ),
+        overlap_summary = (
+            f"{DESEQ}/shared_response/"
+            "de_overlap_summary.csv"
+        ),
+        plot = (
+            f"{PLOTS}/shared_and_species_specific_DEGs.pdf"
+        )
     resources:
-        mem_mb = 8000,
-        time_min = 60
+        mem_mb = 4000,
+        time_min = 30
     conda:
         "../../envs/plots/plots.yml"
     script:
-        "../../scripts/plots/plot_deg_heatmaps.R"
+        "../../scripts/plots/"
+        "summarize_shared_de_response.R"
 
+rule plot_deg_panels: 
+    input: 
+        deseq_results = f"{DESEQ}/deseq_results_by_species.rds", 
+        vst_list = rules.build_species_de_objects.output.vst_list, 
+        raw_counts = f"{DESEQ}/raw_counts_fc.rds" 
+    output: 
+        volcano_experimentalis = ( f"{PLOTS}/volcano_Experimentalis.pdf" ), 
+        volcano_gadabouti = ( f"{PLOTS}/volcano_Gadabouti.pdf" ), 
+        heatmap_experimentalis = ( f"{PLOTS}/heatmap_DEGs_experimentalis.pdf" ), 
+        heatmap_gadabouti = ( f"{PLOTS}/heatmap_DEGs_gadabouti.pdf" ), 
+        panel_experimentalis = ( f"{PLOTS}/DEG_panel_experimentalis.pdf" ), 
+        panel_gadabouti = ( f"{PLOTS}/DEG_panel_gadabouti.pdf" ) 
+    resources: 
+        mem_mb = 8000, 
+        time_min = 60 
+    conda: 
+        "../../envs/plots/plots.yml" 
+    script: 
+        "../../scripts/plots/plot_deg_panels.R"
 
 rule plot_venn_degs:
     input:
-        deseq_results = f"{DESEQ}/deseq_results_by_species.rds"
+        deseq_results = f"{DESEQ}/deseq_results_by_species.rds",
+        config = "config/config.yaml"
     output:
         plot = f"{PLOTS}/venn_DEGs.pdf"
     conda:
         "../../envs/plots/plots.yml"
     script:
         "../../scripts/plots/plot_venn_degs.R"
-
-
-rule plot_volcanoes:
-    input:
-        deseq_results = f"{DESEQ}/deseq_results_by_species.rds"
-    output:
-        expand(f"{PLOTS}/volcano_{{species}}.pdf", species=["Experimentalis", "Gadabouti"])
-    conda:
-        "../../envs/plots/plots.yml"
-    script:
-        "../../scripts/plots/plot_volcanoes.R"
-
 
 rule plot_histone_figures:
     input:
@@ -300,7 +321,6 @@ rule plot_dea_method_comparison:
     script:
         "../../scripts/plots/plot_dea_methods.R"
 
-
 rule plot_cross_species_scatter:
     input:
         vst_list = rules.build_species_de_objects.output.vst_list,
@@ -315,7 +335,6 @@ rule plot_cross_species_scatter:
         "../../envs/plots/plots.yml"
     script:
         "../../scripts/plots/plot_cross_species_scatter.R"
-
 
 rule plot_normalization_qc:
     input:
@@ -339,7 +358,7 @@ rule plot_extended_feature_heatmaps:
         tpm = f"{NORMALIZATION}/tpm_matrix.rds",
         vst = f"{NORMALIZATION}/vst_matrix.rds",
         deseq_results = f"{DESEQ}/deseq_results_by_species.rds",
-        histones = f"{DESEQ}/histone_core.tsv",
+        histones =  f"{OUTDIR}/annotations/histone_core.tsv",
         epigenetic_regulators = (
             f"{OUTDIR}/annotations/epigenetic_regulators.tsv"
         ),
@@ -357,24 +376,34 @@ rule plot_extended_feature_heatmaps:
     script:
         "../../scripts/plots/plot_extended_feature_heatmaps.R"
 
-
 rule plot_go_interest:
     input:
         raw_counts = f"{DESEQ}/raw_counts_fc.rds",
         tpm = f"{NORMALIZATION}/tpm_matrix.rds",
-        deseq_results = f"{DESEQ}/deseq_results_by_species.rds",
-        annot_exp = f"{ANNOTATION}/experimentalis_annotated.rds",
-        annot_gad = f"{ANNOTATION}/gadabouti_annotated.rds",
-        term2gene = f"{ANNOTATION}/TERM2GENE.rds",
-        term2name = f"{ANNOTATION}/TERM2NAME.rds",
-        gaf = config["refs"]["gaf"]
+
+        exp_final = (
+            f"{ANNOTATION}/"
+            "experimentalis_final_gene_list_annotated.csv"
+        ),
+
+        gad_final = (
+            f"{ANNOTATION}/"
+            "gadabouti_final_gene_list_annotated.csv"
+        ),
+        remove_ids = config["refs"]["remove_ids"],
     output:
-        go_dir = directory(f"{PLOTS}/heatmaps/go_interest")
+            go_dir = directory(
+                f"{PLOTS}/heatmaps/go_interest"
+            )
+
+
     resources:
         mem_mb = 16000,
         time_min = 240
+
     conda:
         "../../envs/plots/plots.yml"
+
     script:
         "../../scripts/plots/plot_go_interest.R"
 
@@ -418,3 +447,22 @@ rule plot_quantification_method_comparison:
         f"{LOGS}/plots/quantification_method_comparison.log"
     script:
         "../../scripts/plots/plot_quantification_method_comparison.R"
+
+rule plot_reference_trial_mapping:
+    input:
+        summary=(
+            f"{REFERENCE_SUMMARY_DIR}/"
+            "star_mapping_subsampled_summary.tsv"
+        )
+    output:
+        pdf=(
+            f"{PLOTS}/reference_assessment/"
+            "reference_trial_mapping.pdf"
+        )
+    resources:
+        mem_mb=4000,
+        time_min=30
+    conda:
+        "../../envs/plots/plots.yml"
+    script:
+        "../../scripts/plots/plot_reference_trial_mapping.R"

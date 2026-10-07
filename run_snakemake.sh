@@ -4,7 +4,7 @@
 # use profiles/sge or profiles/slurm respectively
 # Run this script from the repository root.
 
-NOTIFY_EMAIL="Write here some email :)"
+NOTIFY_EMAIL="vjarias@lcg.unam.mx"
 
 notify_when_finished() {
     exit_status=$?
